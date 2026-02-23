@@ -1,0 +1,123 @@
+'''
+Write a python program that takes a URL on the command line, fetches the page, and outputs (one per line)
+    Page Title (without any HTML tags)
+    Page Body (just the text, without any html tags)
+    All the URLs that the page points/links to
+
+Count the frequency of every word in the body of your document
+Write a 64 bit hash function for a word using polynomial rolling hash function
+    h(s)=(i=0 ∑ n−1​ s[i] ⋅ p^i) mod m
+Here s[i] is the ASCII for letter i in a word, use p = 53 and m = 2^64
+Modify your program to take two URLs from the web on the command line, print how many bits are common in their simhashes.
+'''
+
+
+from bs4 import BeautifulSoup
+from urllib.request import Request, urlopen
+
+# Function to fetch the webpage from the provided url
+def fetch_page(url) :
+    url = url 
+    browsers = {'User-Agent' : 'Mozilla/5.0'}
+    soup = BeautifulSoup(urlopen(Request(url, headers= browsers)))
+    return soup 
+
+# Function to print the title of the webpage
+def print_page_title(soup) :
+    title = soup.find("title").get_text()
+    if title :
+        print("The tilte of the page is as follows : \n")
+        print(f"Title : ", title)
+    else : 
+        print("Webpage does not contains title.")
+    print()
+
+# Function to print the body of the webpage by extracting the text from all the paragraph tags
+def print_page_body(soup) :
+    allParagraphs = []
+
+    all_paragraph_tags = soup.find_all("p")
+    for paragraph_tag in all_paragraph_tags :
+        paragraph_text = str(paragraph_tag.get_text())
+        allParagraphs.append(paragraph_text)
+    print("Total Paragraphs : ", len(allParagraphs))
+    return allParagraphs
+
+# Function to print the page links where the Url points to 
+def print_page_links(soup) :
+    allLinks = {}
+    all_anchor_tags = soup.find_all("a")
+    for anchor_tag in all_anchor_tags :
+        link_text = anchor_tag.get_text()
+        link = anchor_tag.get('href')
+        if link and link_text and link.startswith('http') :
+            allLinks[link_text] = link
+    print("Total Links : ", len(allLinks.keys()))
+    print()
+
+# Function to count the frequency of words as well as their hash values 
+def count_frequency(allParagraphs) :
+    wordsFrequency = {}
+    for paragraph in allParagraphs :
+        words = paragraph.split(' ')
+        for word in words :
+            word = word.replace('\n', ' ').lower()
+            if len(word) > 3 :
+                wordHash = 0 
+                for i in range(len(word)) :
+                    wordHash += (ord(word[i]) * (53 ** i))
+                wordHash = wordHash % (2 ** 64)
+                wordHash = format(wordHash, '064b')                     # To convert non binary hash values into binary hash values of 64 bit
+                if word in wordsFrequency :
+                    wordsFrequency[word][0] += 1
+                else :
+                    wordsFrequency[word] = [1, wordHash]
+
+    print("Total words : ", len(wordsFrequency))
+    print()
+    return wordsFrequency
+
+# Function to calculate the fingerprint for any given Url 
+def calculate_simhash(wordsFrequency) :
+    fingerprint = ''
+    for i in range(64) :
+        sum = 0
+        for word, (frequency, hashValue) in wordsFrequency.items() :
+            if hashValue[i] == '1' : 
+                sum += frequency
+            else :
+                sum -= frequency
+        if sum < 0 : 
+            fingerprint += '0'
+        else :
+            fingerprint += '1'
+    return fingerprint
+
+# Function to find the amount of similarity present the given two Urls
+def calculate_similarity(fingerprint1, fingerprint2) :
+    total_similar_bits = 0 
+    for i in range(64) :
+        if fingerprint1[i] == fingerprint2[i] :
+            total_similar_bits += 1
+
+    print("Total similar bits in both URl's : ", total_similar_bits)
+    similarity_percentage = (total_similar_bits/64) * 100
+    return similarity_percentage
+
+# Function to print the amount of similarity present in the given two webpages 
+def check_similarity(url1, url2) :
+    soup1 = get_page(url1)
+    soup2 = get_page(url2)
+    fingerprint1 = calculate_simhash(count_frequency(print_page_body(soup1)))
+    fingerprint2 = calculate_simhash(count_frequency(print_page_body(soup2)))
+    print(f"Url 1 ({url1}) and Url 2 ({url2}) are {calculate_similarity(fingerprint1, fingerprint2)} % similar.")
+
+# Function which takes the Url and fetches the webpage from it
+def get_page(url) :
+    url = url 
+    soup = fetch_page(url)
+    return soup
+
+url1 = str(input("Enter the first Url : ")) 
+url2 = str(input("Enter the second Url : ")) 
+check_similarity(url1, url2)
