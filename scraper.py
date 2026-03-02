@@ -8,6 +8,7 @@ Write a python program that takes a URL on the command line, fetches the page, a
 
 from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
+import sys 
 
 # Function to fetch the webpage from the provided url
 def fetch_page(url) :
@@ -20,7 +21,7 @@ def fetch_page(url) :
 def print_page_title(soup) :
     title = soup.find("title").get_text()
     if title :
-        print("The tilte of the page is as follows : \n")
+        print("The title of the page is as follows : \n")
         print(f"Title : ", title)
     else : 
         print("Webpage does not contains title.")
@@ -59,7 +60,10 @@ def print_page_links(soup) :
 
 # Main function to perform the operations and extracting important details from Url
 def get_page() :
-    url = str(input("Enter the URL : "))
+    url = sys.argv[1]
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    print(url)
     soup = fetch_page(url)
     print_page_title(soup)
     print("The body of the webpage is as follows : \n")
